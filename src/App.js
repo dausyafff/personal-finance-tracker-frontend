@@ -1,8 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import Layout from './components/common/Layout';
 
-// ✅ METHOD 36: Protected Route Component
+// ✅ 1. DEFINISIKAN ProtectedRoute Component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   
@@ -13,7 +14,7 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
-// ✅ METHOD 37: Public Route Component (redirect if authenticated)
+// ✅ 2. DEFINISIKAN PublicRoute Component
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   
@@ -24,21 +25,29 @@ const PublicRoute = ({ children }) => {
   return !isAuthenticated ? children : <Navigate to="/dashboard" />;
 };
 
-// Lazy load components for better performance
+// ✅ 3. WRAPPER COMPONENT UNTUK PROTECTED ROUTES DENGAN LAYOUT
+const ProtectedLayout = ({ children }) => {
+  return (
+    <Layout>
+      {children}
+    </Layout>
+  );
+};
+
+// Lazy load components
 const Login = React.lazy(() => import('./components/auth/Login'));
 const Register = React.lazy(() => import('./components/auth/Register'));
 const Dashboard = React.lazy(() => import('./components/dashboard/Dashboard'));
 const TransactionList = React.lazy(() => import('./components/transactions/TransactionList'));
 
-// ✅ METHOD 38: Main App Component
 function App() {
   return (
     <AuthProvider>
       <Router>
         <div className="App">
-          <React.Suspense fallback={<div>Loading...</div>}>
+          <React.Suspense fallback={<div style={{ textAlign: 'center', padding: '50px' }}>Loading...</div>}>
             <Routes>
-              {/* Public Routes */}
+              {/* PUBLIC ROUTES - TANPA LAYOUT */}
               <Route path="/login" element={
                 <PublicRoute>
                   <Login />
@@ -50,19 +59,23 @@ function App() {
                 </PublicRoute>
               } />
 
-              {/* Protected Routes */}
+              {/* PROTECTED ROUTES - DENGAN LAYOUT */}
               <Route path="/dashboard" element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <ProtectedLayout>
+                    <Dashboard />
+                  </ProtectedLayout>
                 </ProtectedRoute>
               } />
               <Route path="/transactions" element={
                 <ProtectedRoute>
-                  <TransactionList />
+                  <ProtectedLayout>
+                    <TransactionList />
+                  </ProtectedLayout>
                 </ProtectedRoute>
               } />
 
-              {/* Default Route */}
+              {/* DEFAULT ROUTE */}
               <Route path="/" element={<Navigate to="/dashboard" />} />
             </Routes>
           </React.Suspense>
