@@ -21,6 +21,22 @@ export const useTransactions = () => {
     }
   };
 
+  const updateTransaction = async (id, transactionData) => {
+    try {
+      setError(null);
+      const updatedTransaction = await transactionService.update(id, transactionData);
+      setTransactions(prev => 
+        prev.map(transaction => 
+          transaction.id === id ? updatedTransaction : transaction
+        )
+      );
+      return updatedTransaction;
+    } catch (err) {
+      setError(err.message || 'Failed to update transaction');
+      throw err;
+    }
+  };
+
   // ✅ METHOD 33: Add new transaction
   const addTransaction = async (transactionData) => {
     try {
@@ -58,6 +74,7 @@ export const useTransactions = () => {
     error,
     fetchTransactions,
     addTransaction,
+    updateTransaction,
     deleteTransaction,
     setError
   };
