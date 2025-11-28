@@ -3,25 +3,19 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
 const Register = () => {
-  // State management
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '', // Ubah dari firstName/lastName jadi name jika backend butuh field ini
     email: '',
     password: '',
-    confirmPassword: '',
-    agreeToTerms: false
+    password_confirmation: '', // Sesuaikan dengan nama field backend
   });
   
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState('');
 
-  // Custom hooks
   const { register, error, clearError, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Effects
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard');
@@ -32,107 +26,83 @@ const Register = () => {
     clearError();
   }, []);
 
-  // Password strength checker
-  useEffect(() => {
-    if (formData.password) {
-      const strength = checkPasswordStrength(formData.password);
-      setPasswordStrength(strength);
-    } else {
-      setPasswordStrength('');
-    }
-  }, [formData.password]);
-
-  // Event handlers
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData(prevState => ({
       ...prevState,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: value
     }));
 
-    // Clear specific error when user starts typing
+    // Clear error ketika user mulai mengetik
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
+  // ✅ PERBAIKAN 1: Validasi yang lebih robust
   const validateForm = () => {
     const newErrors = {};
 
-    // Required fields validation
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-    
+    // Validasi name
+    if (!formData.name?.trim()) {
+      newErrors.name = 'Full name is required';
+    }
+
+    // Validasi email
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email format is invalid';
     }
 
+    // Validasi password
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
     }
 
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    if (!formData.agreeToTerms) {
-      newErrors.agreeToTerms = 'You must agree to the terms and conditions';
+    // Validasi confirm password
+    if (!formData.password_confirmation) {
+      newErrors.password_confirmation = 'Please confirm your password';
+    } else if (formData.password !== formData.password_confirmation) {
+      newErrors.password_confirmation = 'Passwords do not match';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const checkPasswordStrength = (password) => {
-    const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])(?=.{8,})/;
-    const mediumRegex = /^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,})/;
-
-    if (strongRegex.test(password)) return 'strong';
-    if (mediumRegex.test(password)) return 'medium';
-    if (password.length > 0) return 'weak';
-    return '';
-  };
-
-  const getPasswordStrengthColor = () => {
-    switch (passwordStrength) {
-      case 'strong': return '#28a745';
-      case 'medium': return '#ffc107';
-      case 'weak': return '#dc3545';
-      default: return 'transparent';
-    }
-  };
-
-  const getPasswordStrengthText = () => {
-    switch (passwordStrength) {
-      case 'strong': return 'Strong password';
-      case 'medium': return 'Medium password';
-      case 'weak': return 'Weak password';
-      default: return '';
-    }
-  };
-
+  // ✅ PERBAIKAN 2: Handle submit dengan structure data yang benar
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      console.log('Validation failed:', errors);
+      return;
+    }
 
     setIsLoading(true);
+    
     try {
-      await register({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+      // ✅ PERBAIKAN 3: Structure data sesuai kebutuhan backend
+      const registrationData = {
+        name: formData.name,
         email: formData.email,
-        password: formData.password
-      });
-      // Navigation will be handled by useEffect watching isAuthenticated
+        password: formData.password,
+        password_confirmation: formData.password_confirmation,
+        // Tambahkan field lain jika diperlukan backend
+      };
+
+      console.log('Sending registration data:', registrationData);
+      
+      await register(registrationData);
+      
+      // Navigation akan dihandle oleh useEffect yang watch isAuthenticated
+      
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('Registration error in component:', error);
+      // Error sudah dihandle oleh AuthContext
     } finally {
       setIsLoading(false);
     }
@@ -166,6 +136,7 @@ const Register = () => {
         </p>
       </div>
 
+      {/* ✅ PERBAIKAN 4: Tampilkan error dari AuthContext */}
       {error && (
         <div style={{ 
           color: '#dc3545', 
@@ -175,75 +146,42 @@ const Register = () => {
           marginBottom: '20px',
           border: '1px solid #f5c6cb'
         }}>
-          {error}
+          <strong>Registration Error:</strong> {error}
         </div>
       )}
 
+      {/* ✅ PERBAIKAN 5: Form dengan field yang sesuai */}
       <form onSubmit={handleSubmit}>
-        <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '6px',
-              fontWeight: '500',
-              color: '#2c3e50',
-              fontSize: '14px'
-            }}>
-              First Name *
-            </label>
-            <input
-              type="text"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleChange}
-              style={{ 
-                width: '100%', 
-                padding: '12px',
-                border: `2px solid ${errors.firstName ? '#dc3545' : '#e1e5e9'}`,
-                borderRadius: '8px',
-                fontSize: '16px',
-                transition: 'border-color 0.2s'
-              }}
-              placeholder="Enter your first name"
-            />
-            {errors.firstName && (
-              <span style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                {errors.firstName}
-              </span>
-            )}
-          </div>
-
-          <div style={{ flex: 1 }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '6px',
-              fontWeight: '500',
-              color: '#2c3e50',
-              fontSize: '14px'
-            }}>
-              Last Name *
-            </label>
-            <input
-              type="text"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleChange}
-              style={{ 
-                width: '100%', 
-                padding: '12px',
-                border: `2px solid ${errors.lastName ? '#dc3545' : '#e1e5e9'}`,
-                borderRadius: '8px',
-                fontSize: '16px',
-                transition: 'border-color 0.2s'
-              }}
-              placeholder="Enter your last name"
-            />
-            {errors.lastName && (
-              <span style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                {errors.lastName}
-              </span>
-            )}
-          </div>
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ 
+            display: 'block', 
+            marginBottom: '6px',
+            fontWeight: '500',
+            color: '#2c3e50',
+            fontSize: '14px'
+          }}>
+            Full Name *
+          </label>
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            style={{ 
+              width: '100%', 
+              padding: '12px',
+              border: `2px solid ${errors.name ? '#dc3545' : '#e1e5e9'}`,
+              borderRadius: '8px',
+              fontSize: '16px',
+              transition: 'border-color 0.2s'
+            }}
+            placeholder="Enter your full name"
+          />
+          {errors.name && (
+            <span style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+              {errors.name}
+            </span>
+          )}
         </div>
 
         <div style={{ marginBottom: '20px' }}>
@@ -301,34 +239,8 @@ const Register = () => {
               fontSize: '16px',
               transition: 'border-color 0.2s'
             }}
-            placeholder="Create a password"
+            placeholder="Create a password (min. 6 characters)"
           />
-          {passwordStrength && (
-            <div style={{ marginTop: '8px' }}>
-              <div style={{
-                height: '4px',
-                backgroundColor: '#e1e5e9',
-                borderRadius: '2px',
-                overflow: 'hidden'
-              }}>
-                <div style={{
-                  height: '100%',
-                  width: passwordStrength === 'weak' ? '33%' : passwordStrength === 'medium' ? '66%' : '100%',
-                  backgroundColor: getPasswordStrengthColor(),
-                  transition: 'all 0.3s ease'
-                }} />
-              </div>
-              <span style={{ 
-                color: getPasswordStrengthColor(),
-                fontSize: '12px',
-                fontWeight: '500',
-                marginTop: '4px',
-                display: 'block'
-              }}>
-                {getPasswordStrengthText()}
-              </span>
-            </div>
-          )}
           {errors.password && (
             <span style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px', display: 'block' }}>
               {errors.password}
@@ -336,7 +248,7 @@ const Register = () => {
           )}
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '25px' }}>
           <label style={{ 
             display: 'block', 
             marginBottom: '6px',
@@ -348,50 +260,22 @@ const Register = () => {
           </label>
           <input
             type="password"
-            name="confirmPassword"
-            value={formData.confirmPassword}
+            name="password_confirmation"
+            value={formData.password_confirmation}
             onChange={handleChange}
             style={{ 
               width: '100%', 
               padding: '12px',
-              border: `2px solid ${errors.confirmPassword ? '#dc3545' : '#e1e5e9'}`,
+              border: `2px solid ${errors.password_confirmation ? '#dc3545' : '#e1e5e9'}`,
               borderRadius: '8px',
               fontSize: '16px',
               transition: 'border-color 0.2s'
             }}
             placeholder="Confirm your password"
           />
-          {errors.confirmPassword && (
+          {errors.password_confirmation && (
             <span style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-              {errors.confirmPassword}
-            </span>
-          )}
-        </div>
-
-        <div style={{ marginBottom: '25px' }}>
-          <label style={{ 
-            display: 'flex', 
-            alignItems: 'flex-start',
-            gap: '10px',
-            cursor: 'pointer'
-          }}>
-            <input
-              type="checkbox"
-              name="agreeToTerms"
-              checked={formData.agreeToTerms}
-              onChange={handleChange}
-              style={{ 
-                marginTop: '2px',
-                transform: 'scale(1.2)'
-              }}
-            />
-            <span style={{ fontSize: '14px', color: '#2c3e50', lineHeight: '1.4' }}>
-              I agree to the <Link to="/terms" style={{ color: '#007bff', textDecoration: 'none' }}>Terms and Conditions</Link> and <Link to="/privacy" style={{ color: '#007bff', textDecoration: 'none' }}>Privacy Policy</Link>
-            </span>
-          </label>
-          {errors.agreeToTerms && (
-            <span style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px', display: 'block', marginLeft: '28px' }}>
-              {errors.agreeToTerms}
+              {errors.password_confirmation}
             </span>
           )}
         </div>
@@ -412,28 +296,8 @@ const Register = () => {
             transition: 'all 0.2s',
             marginBottom: '20px'
           }}
-          onMouseOver={(e) => {
-            if (!isLoading) e.target.style.backgroundColor = '#0056b3';
-          }}
-          onMouseOut={(e) => {
-            if (!isLoading) e.target.style.backgroundColor = '#007bff';
-          }}
         >
-          {isLoading ? (
-            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <div style={{
-                width: '16px',
-                height: '16px',
-                border: '2px solid transparent',
-                borderTop: '2px solid white',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite'
-              }} />
-              Creating Account...
-            </span>
-          ) : (
-            'Create Account'
-          )}
+          {isLoading ? 'Creating Account...' : 'Create Account'}
         </button>
       </form>
 
@@ -455,19 +319,6 @@ const Register = () => {
           Sign in here
         </Link>
       </p>
-
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-          input:focus {
-            outline: none;
-            border-color: #007bff !important;
-          }
-        `}
-      </style>
     </div>
   );
 };
