@@ -9,3 +9,6 @@ export const Transaction = {
   updatedAt: string,
   userId: string | number
 };
+
+
+
