@@ -1,86 +1,51 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import Layout from './components/common/Layout';
+import { AuthProvider } from './contexts/AuthContext';
+import { TransactionProvider } from './contexts/TransactionContext';
+import PrivateRoute from './components/PrivateRoute';
+import './App.css';
 
-// ✅ 1. DEFINISIKAN ProtectedRoute Component
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-  
-  return isAuthenticated ? children : <Navigate to="/login" />;
-};
-
-// ✅ 2. DEFINISIKAN PublicRoute Component
-const PublicRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-  
-  return !isAuthenticated ? children : <Navigate to="/dashboard" />;
-};
-
-// ✅ 3. WRAPPER COMPONENT UNTUK PROTECTED ROUTES DENGAN LAYOUT
-const ProtectedLayout = ({ children }) => {
-  return (
-    <Layout>
-      {children}
-    </Layout>
-  );
-};
-
-// Lazy load components
-const Login = React.lazy(() => import('./components/auth/Login'));
-const Register = React.lazy(() => import('./components/auth/Register'));
-const Dashboard = React.lazy(() => import('./components/dashboard/Dashboard'));
-const TransactionList = React.lazy(() => import('./components/transactions/TransactionList'));
+// Pages
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import Transactions from './pages/Transactions';
+import AddTransaction from './pages/AddTransaction';
+import EditTransaction from './pages/EditTransaction';
+import Categories from './pages/Categories';
+import Reports from './pages/Reports';
+import Profile from './pages/Profile';
+import NotFound from './pages/NotFound';
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="App">
-          <React.Suspense fallback={<div style={{ textAlign: 'center', padding: '50px' }}>Loading...</div>}>
+      <TransactionProvider>
+        <Router>
+          <div className="App">
             <Routes>
-              {/* PUBLIC ROUTES - TANPA LAYOUT */}
-              <Route path="/login" element={
-                <PublicRoute>
-                  <Login />
-                </PublicRoute>
-              } />
-              <Route path="/register" element={
-                <PublicRoute>
-                  <Register />
-                </PublicRoute>
-              } />
-
-              {/* PROTECTED ROUTES - DENGAN LAYOUT */}
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <ProtectedLayout>
-                    <Dashboard />
-                  </ProtectedLayout>
-                </ProtectedRoute>
-              } />
-              <Route path="/transactions" element={
-                <ProtectedRoute>
-                  <ProtectedLayout>
-                    <TransactionList />
-                  </ProtectedLayout>
-                </ProtectedRoute>
-              } />
-
-              {/* DEFAULT ROUTE */}
-              <Route path="/" element={<Navigate to="/dashboard" />} />
+              {/* Public Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              
+              {/* Protected Routes */}
+              <Route element={<PrivateRoute />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/transactions" element={<Transactions />} />
+                <Route path="/transactions/add" element={<AddTransaction />} />
+                <Route path="/transactions/edit/:id" element={<EditTransaction />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              </Route>
+              
+              {/* 404 */}
+              <Route path="*" element={<NotFound />} />
             </Routes>
-          </React.Suspense>
-        </div>
-      </Router>
+          </div>
+        </Router>
+      </TransactionProvider>
     </AuthProvider>
   );
 }
