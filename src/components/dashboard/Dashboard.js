@@ -1,229 +1,451 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { dashboardService } from '../../services/dashboardService';
+import { useTransactions } from '../contexts/TransactionContext';
+import { useAuth } from '../contexts/AuthContext';
+import { 
+  FaArrowUp, 
+  FaArrowDown, 
+  FaWallet,
+  FaPlusCircle,
+  FaEye
+} from 'react-icons/fa';
 
 const Dashboard = () => {
-  const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { 
+    financialSummary, 
+    transactions, 
+    expensesByCategory, 
+    loading, 
+    initializeData 
+  } = useTransactions();
+  
+  const { user } = useAuth();
+  const [recentTransactions, setRecentTransactions] = useState([]);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    initializeData();
+  }, [initializeData]);
 
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      const data = await dashboardService.getDashboardData();
-      setDashboardData(data);
-    } catch (err) {
-      setError(err.message || 'Failed to fetch dashboard data');
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    // Get 5 most recent transactions
+    setRecentTransactions(transactions.slice(0, 5));
+  }, [transactions]);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <h3>Loading dashboard...</h3>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '50vh' 
+      }}>
+        <div>Loading dashboard data...</div>
       </div>
     );
   }
-
-  if (error) {
-    return (
-      <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>
-        <h3>Error: {error}</h3>
-        <button onClick={fetchDashboardData}>Retry</button>
-      </div>
-    );
-  }
-
-  if (!dashboardData) {
-    return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <h3>No data available</h3>
-      </div>
-    );
-  }
-
-  const { totals, recent_transactions, expense_by_category } = dashboardData;
 
   return (
     <div>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '2rem'
+        marginBottom: '30px'
       }}>
-        <h1>Financial Dashboard</h1>
+        <div>
+          <h1 style={{ 
+            color: '#2c3e50', 
+            margin: '0 0 5px 0',
+            fontSize: '28px'
+          }}>
+            Welcome back, {user?.name?.split(' ')[0] || 'User'}!
+          </h1>
+          <p style={{ color: '#7f8c8d', margin: 0 }}>
+            Here's your financial overview
+          </p>
+        </div>
+        
         <Link 
-          to="/transactions"
+          to="/transactions/add"
           style={{
-            padding: '0.75rem 1.5rem',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
             backgroundColor: '#007bff',
             color: 'white',
+            padding: '12px 24px',
+            borderRadius: '8px',
             textDecoration: 'none',
-            borderRadius: '4px',
-            fontWeight: 'bold'
+            fontWeight: '500',
+            transition: 'all 0.2s'
           }}
         >
-          + Add Transaction
+          <FaPlusCircle /> Add Transaction
         </Link>
       </div>
-      
-      {/* SUMMARY CARDS */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(3, 1fr)', 
-        gap: '20px', 
-        marginBottom: '30px' 
+
+      {/* Financial Summary Cards */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: '20px',
+        marginBottom: '40px'
       }}>
-        <div style={{ 
-          padding: '25px', 
-          backgroundColor: 'white', 
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          textAlign: 'center'
+        {/* Total Income Card */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '25px',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+          borderLeft: '5px solid #28a745'
         }}>
-          <h3 style={{ margin: '0 0 10px 0', color: '#666' }}>Total Income</h3>
-          <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'green', margin: 0 }}>
-            ${parseFloat(totals.total_income || 0).toLocaleString()}
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <h3 style={{ 
+                color: '#6c757d', 
+                margin: '0 0 10px 0',
+                fontSize: '16px',
+                fontWeight: '500'
+              }}>
+                Total Income
+              </h3>
+              <p style={{ 
+                color: '#28a745', 
+                margin: 0,
+                fontSize: '32px',
+                fontWeight: '600'
+              }}>
+                {formatCurrency(financialSummary.totalIncome)}
+              </p>
+            </div>
+            <div style={{
+              backgroundColor: '#d4edda',
+              borderRadius: '50%',
+              width: '50px',
+              height: '50px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <FaArrowUp style={{ color: '#28a745', fontSize: '20px' }} />
+            </div>
+          </div>
         </div>
-        
-        <div style={{ 
-          padding: '25px', 
-          backgroundColor: 'white', 
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          textAlign: 'center'
+
+        {/* Total Expense Card */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '25px',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+          borderLeft: '5px solid #dc3545'
         }}>
-          <h3 style={{ margin: '0 0 10px 0', color: '#666' }}>Total Expense</h3>
-          <p style={{ fontSize: '28px', fontWeight: 'bold', color: 'red', margin: 0 }}>
-            ${parseFloat(totals.total_expense || 0).toLocaleString()}
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <h3 style={{ 
+                color: '#6c757d', 
+                margin: '0 0 10px 0',
+                fontSize: '16px',
+                fontWeight: '500'
+              }}>
+                Total Expense
+              </h3>
+              <p style={{ 
+                color: '#dc3545', 
+                margin: 0,
+                fontSize: '32px',
+                fontWeight: '600'
+              }}>
+                {formatCurrency(financialSummary.totalExpense)}
+              </p>
+            </div>
+            <div style={{
+              backgroundColor: '#f8d7da',
+              borderRadius: '50%',
+              width: '50px',
+              height: '50px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <FaArrowDown style={{ color: '#dc3545', fontSize: '20px' }} />
+            </div>
+          </div>
         </div>
-        
-        <div style={{ 
-          padding: '25px', 
-          backgroundColor: 'white', 
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          textAlign: 'center'
+
+        {/* Balance Card */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '25px',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+          borderLeft: '5px solid #007bff'
         }}>
-          <h3 style={{ margin: '0 0 10px 0', color: '#666' }}>Balance</h3>
-          <p style={{ 
-            fontSize: '28px', 
-            fontWeight: 'bold', 
-            color: parseFloat(totals.balance || 0) >= 0 ? 'blue' : 'red', 
-            margin: 0 
-          }}>
-            ${parseFloat(totals.balance || 0).toLocaleString()}
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <h3 style={{ 
+                color: '#6c757d', 
+                margin: '0 0 10px 0',
+                fontSize: '16px',
+                fontWeight: '500'
+              }}>
+                Current Balance
+              </h3>
+              <p style={{ 
+                color: financialSummary.balance >= 0 ? '#28a745' : '#dc3545',
+                margin: 0,
+                fontSize: '32px',
+                fontWeight: '600'
+              }}>
+                {formatCurrency(financialSummary.balance)}
+              </p>
+            </div>
+            <div style={{
+              backgroundColor: '#cce5ff',
+              borderRadius: '50%',
+              width: '50px',
+              height: '50px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <FaWallet style={{ color: '#007bff', fontSize: '20px' }} />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-        {/* RECENT TRANSACTIONS */}
-        <div style={{ 
-          backgroundColor: 'white', 
-          padding: '25px', 
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+        gap: '30px'
+      }}>
+        {/* Recent Transactions */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '25px',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0 }}>Recent Transactions</h3>
-            <Link to="/transactions" style={{ color: '#007bff', textDecoration: 'none' }}>
-              View All
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '20px'
+          }}>
+            <h3 style={{ 
+              color: '#2c3e50', 
+              margin: 0,
+              fontSize: '18px',
+              fontWeight: '600'
+            }}>
+              Recent Transactions
+            </h3>
+            <Link 
+              to="/transactions"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#007bff',
+                textDecoration: 'none',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              <FaEye /> View All
             </Link>
           </div>
-          
-          {recent_transactions.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-              <p>No transactions yet</p>
-              <Link 
-                to="/transactions"
-                style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  textDecoration: 'none',
-                  borderRadius: '4px',
-                  display: 'inline-block',
-                  marginTop: '10px'
-                }}
-              >
-                Create First Transaction
-              </Link>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {recent_transactions.map(transaction => (
-                <div key={transaction.id} style={{ 
-                  padding: '15px',
-                  border: '1px solid #eee',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
+
+          {recentTransactions.length > 0 ? (
+            <div>
+              {recentTransactions.map((transaction) => (
+                <div 
+                  key={transaction.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '15px 0',
+                    borderBottom: '1px solid #f1f1f1'
+                  }}
+                >
                   <div>
-                    <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>
+                    <div style={{ 
+                      fontWeight: '500', 
+                      color: '#2c3e50',
+                      marginBottom: '5px'
+                    }}>
                       {transaction.description}
                     </div>
-                    <div style={{ fontSize: '0.9rem', color: '#666' }}>
-                      {transaction.category?.name} • {new Date(transaction.transaction_date).toLocaleDateString()}
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px',
+                      fontSize: '14px',
+                      color: '#7f8c8d'
+                    }}>
+                      <span style={{
+                        backgroundColor: transaction.type === 'income' ? '#d4edda' : '#f8d7da',
+                        color: transaction.type === 'income' ? '#28a745' : '#dc3545',
+                        padding: '3px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '500'
+                      }}>
+                        {transaction.type === 'income' ? 'Income' : 'Expense'}
+                      </span>
+                      <span>{transaction.category}</span>
+                      <span>•</span>
+                      <span>{formatDate(transaction.date)}</span>
                     </div>
                   </div>
-                  <div style={{ 
-                    fontWeight: 'bold',
-                    color: transaction.type === 'income' ? 'green' : 'red'
+                  <div style={{
+                    fontWeight: '600',
+                    fontSize: '18px',
+                    color: transaction.type === 'income' ? '#28a745' : '#dc3545'
                   }}>
-                    {transaction.type === 'income' ? '+' : '-'} 
-                    ${parseFloat(transaction.amount).toLocaleString()}
+                    {transaction.type === 'income' ? '+' : '-'}
+                    {formatCurrency(transaction.amount)}
                   </div>
                 </div>
               ))}
+            </div>
+          ) : (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px 20px',
+              color: '#7f8c8d'
+            }}>
+              <div style={{ 
+                fontSize: '48px', 
+                marginBottom: '10px',
+                opacity: 0.5
+              }}>
+                💰
+              </div>
+              <h4 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>
+                No transactions yet
+              </h4>
+              <p style={{ margin: '0 0 20px 0' }}>
+                Start tracking your finances by adding your first transaction
+              </p>
+              <Link 
+                to="/transactions/add"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  padding: '10px 20px',
+                  borderRadius: '6px',
+                  textDecoration: 'none',
+                  fontWeight: '500'
+                }}
+              >
+                <FaPlusCircle /> Create First Transaction
+              </Link>
             </div>
           )}
         </div>
 
-        {/* EXPENSE BY CATEGORY */}
-        <div style={{ 
-          backgroundColor: 'white', 
-          padding: '25px', 
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        {/* Expenses by Category */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '25px',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
         }}>
-          <h3 style={{ margin: '0 0 20px 0' }}>Expenses by Category</h3>
-          
-          {expense_by_category.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-              <p>No expense data yet</p>
+          <h3 style={{ 
+            color: '#2c3e50', 
+            margin: '0 0 20px 0',
+            fontSize: '18px',
+            fontWeight: '600'
+          }}>
+            Expenses by Category
+          </h3>
+
+          {expensesByCategory.length > 0 ? (
+            <div>
+              {expensesByCategory.map((item, index) => {
+                const percentage = (item.amount / financialSummary.totalExpense) * 100;
+                return (
+                  <div key={index} style={{ marginBottom: '20px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between',
+                      marginBottom: '5px'
+                    }}>
+                      <span style={{ fontWeight: '500', color: '#2c3e50' }}>
+                        {item.category}
+                      </span>
+                      <span style={{ fontWeight: '600', color: '#dc3545' }}>
+                        {formatCurrency(item.amount)}
+                      </span>
+                    </div>
+                    <div style={{
+                      height: '8px',
+                      backgroundColor: '#e9ecef',
+                      borderRadius: '4px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${percentage}%`,
+                        backgroundColor: '#dc3545',
+                        borderRadius: '4px'
+                      }} />
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginTop: '5px',
+                      fontSize: '12px',
+                      color: '#7f8c8d'
+                    }}>
+                      <span>{percentage.toFixed(1)}% of total expenses</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {expense_by_category.map(item => (
-                <div key={item.category_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div 
-                      style={{ 
-                        width: '12px', 
-                        height: '12px', 
-                        backgroundColor: item.category.color || '#666',
-                        borderRadius: '50%' 
-                      }}
-                    ></div>
-                    <span>{item.category.name}</span>
-                  </div>
-                  <span style={{ fontWeight: 'bold' }}>
-                    ${parseFloat(item.total).toLocaleString()}
-                  </span>
-                </div>
-              ))}
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px 20px',
+              color: '#7f8c8d'
+            }}>
+              <div style={{ 
+                fontSize: '48px', 
+                marginBottom: '10px',
+                opacity: 0.5
+              }}>
+                📊
+              </div>
+              <h4 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>
+                No expense data yet
+              </h4>
+              <p style={{ margin: 0 }}>
+                Add expense transactions to see category breakdown
+              </p>
             </div>
           )}
         </div>
