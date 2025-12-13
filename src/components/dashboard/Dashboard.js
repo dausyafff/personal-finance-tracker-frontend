@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useTransactions } from '../contexts/TransactionContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useTransactions } from '../../contexts/TransactionContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   FaArrowUp, 
   FaArrowDown, 
